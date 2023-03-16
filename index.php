@@ -20,38 +20,56 @@ try {
 }
 
 
-// входная строка с email-адресами
+class EmailChecker {
+    private $pdo;
 
-$email_string = "example1@mail.com;example2@mail.com;example3mail.com;example4@mail.com";
+    public function __construct(PDO $pdo)  {
+        $this->pdo = $pdo;
+    }
 
-// делим строку на отдельные email-адреса, используя ";"
-$emails = explode(";", $email_string);
+    public function checkAndInsertEmails(string $emailsSrting): void {
+        $emails = explode(";", $emailsSrting);
+        $correct_emails = 0;
+        $incorrect_emails = 0;
+
+        $incorrect_emails_list = [];
 
 
-$correct_emails = 0;
-$incorrect_emails = 0;
-$incorrect_emails_list = [];
-foreach ($emails as $email) {
-    // проверка email-адреса на корректность с помощью регулярного выражения
-    if (preg_match("/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/", $email)) {
-        // email-адрес корректный, добавляем его в базу данных
-        $stmt = $pdo->prepare("INSERT INTO emails (email) VALUES (?)");
-        $stmt->execute([$email]);
-        $correct_emails++;
-    } else {
-        // email-адрес некорректный, добавляем его в список некорректных email-адресов
-        $incorrect_emails++;
-        $incorrect_emails_list[] = $email;
+        foreach ($emails as $email) {
+            // проверка email-адреса на корректность с помощью регулярного выражения
+            if (preg_match("/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/", $email)) {
+                $this->insertEmail($email);
+                $correct_emails++;
+            } else {
+                $incorrect_emails_list[] = $email;
+                $incorrect_emails++;
+            }
+        }
+        echo "Количество корректных адресов: {$correct_emails}\n";
+        echo "Количество некорректных адресов: {$incorrect_emails}\n";
+
+        if ($incorrect_emails > 0) {
+            echo "Некорректные адреса: " . implode('; ',$incorrect_emails_list) . ".\n";
+        }
+        
+    }
+    
+
+    // Добавление корректных email-адресов в БД
+    private function insertEmail(string $email):void {
+        $sql = "INSERT INTO emails (email) VALUES (:email)";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->bindParam(':email', $email);
+        $stmt->execute();
     }
 }
 
 
-echo "Количество корректных адресов: " . $correct_emails . "<br>";
-echo "Количество некорректных адресов: " . $incorrect_emails . "<br>";
-echo "Список некорректных адресов: <br>";
-foreach ($incorrect_emails_list as $email) {
-    echo $email . "<br>";
-}
+
+$emailChecker = new EmailChecker($pdo);
+$emailChecker->checkAndInsertEmails('example2@mail.com;example3mail.com;example4@mail.com;example4mail.com');
+
+
 
 
 ?>
